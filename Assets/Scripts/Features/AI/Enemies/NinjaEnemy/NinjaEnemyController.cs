@@ -1,5 +1,6 @@
 using System;
 using Core.Communication;
+using Core.Managers;
 using Features.AI.Base;
 using Features.AI.Definitions;
 using Features.AI.Detection;
@@ -60,7 +61,7 @@ namespace Features.AI.Enemies.NinjaEnemy
             
             if (DetectionSystem.IsPlayerDetected(Player.transform, gameObject.transform))
             {
-                //player found
+                GameManager.Instance.TriggerDetectionGameOver();
             }
         }
 

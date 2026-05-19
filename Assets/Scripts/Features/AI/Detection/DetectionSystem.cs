@@ -1,5 +1,5 @@
 using UnityEngine;
-using UnityEngine.UI; // IMPORTANTE: Añadimos esto para poder usar el componente Image
+using UnityEngine.UI;
 
 namespace Features.AI.Detection
 {
@@ -8,17 +8,19 @@ namespace Features.AI.Detection
         [Range(1, 360)]
         [SerializeField] private float detectionAngle = 60f;
         [SerializeField] private float detectionDistance = 10f;
+        
+        [Header("Layer Setup")]
+        [SerializeField] private LayerMask playerLayer;
         [SerializeField] private LayerMask obstacleLayer;
+        
         [SerializeField] private Transform rayOrigin;
 
         [Header("Meter Settings")]
-        [Tooltip("How many points per second will the meter rise when at maximum proximity?")]
         [SerializeField] private float detectionBuildSpeed = 100f;
-        [Tooltip("By how many points per second will the meter decrease when the player hides?")]
         [SerializeField] private float detectionDecaySpeed = 50f;
 
         [Header("Debug & UI Setup")]
-        [SerializeField] private string DEBUG_DetectionLevel;
+        [SerializeField] private string debugDetectionLevel;
         [SerializeField] private GameObject uiContainer;
         [SerializeField] private Image uiFillBar;
 
@@ -27,11 +29,13 @@ namespace Features.AI.Detection
         private float _currentDetectionLevel;
         private float _sqrDetectionDistance;
         private float _cosHalfAngle;
+        private LayerMask _combinedDetectionLayer;
 
         private void Awake()
         {
             _sqrDetectionDistance = detectionDistance * detectionDistance;
             _cosHalfAngle = Mathf.Cos(detectionAngle * 0.5f * Mathf.Deg2Rad);
+            _combinedDetectionLayer = playerLayer | obstacleLayer;
             
             if (uiContainer != null)
             {
@@ -56,7 +60,7 @@ namespace Features.AI.Detection
             }
             
             _currentDetectionLevel = Mathf.Clamp(_currentDetectionLevel, 0f, 100f);
-            DEBUG_DetectionLevel = $"Detection level: {_currentDetectionLevel}";
+            debugDetectionLevel = $"Detection level: {_currentDetectionLevel}";
             
             UpdateDetectionUI();
 
@@ -89,22 +93,61 @@ namespace Features.AI.Detection
         private bool CheckVisualSight(Transform player, Transform enemy, out float currentDistance)
         {
             currentDistance = 0f;
-            Vector3 directionToPlayer = player.position - enemy.position;
-            float sqrDistance = directionToPlayer.sqrMagnitude;
+            Vector3 rayStart = rayOrigin != null ? rayOrigin.position : enemy.position;
+
+            Vector3 playerCenterTarget = player.position;
+            Vector3 playerHeadTarget = player.position;
+
+            if (player.TryGetComponent<CharacterController>(out var playerController))
+            {
+                playerCenterTarget = player.TransformPoint(playerController.center);
+                float internalHeadOffset = (playerController.height * 0.5f) - (playerController.radius * 0.3f);
+                playerHeadTarget = playerCenterTarget + (Vector3.up * internalHeadOffset);
+            }
+            else
+            {
+                playerCenterTarget = player.position;
+                playerHeadTarget = player.position + (Vector3.up * 1.5f);
+            }
+
+            Vector3 directionToCenter = playerCenterTarget - rayStart;
+            float sqrDistance = directionToCenter.sqrMagnitude;
 
             if (sqrDistance > _sqrDetectionDistance)
                 return false;
 
             currentDistance = Mathf.Sqrt(sqrDistance);
+            directionToCenter.Normalize();
             
-            directionToPlayer.Normalize();
-            float dotProduct = Vector3.Dot(enemy.forward, directionToPlayer);
-
+            float dotProduct = Vector3.Dot(enemy.forward, directionToCenter);
             if (dotProduct < _cosHalfAngle) return false;
 
-            var rayStart = rayOrigin != null ? rayOrigin.position : transform.position; 
-            
-            return !Physics.Raycast(rayStart, directionToPlayer, detectionDistance, obstacleLayer);
+            Vector3 directionToHead = (playerHeadTarget - rayStart).normalized;
+            float distanceToHead = Vector3.Distance(rayStart, playerHeadTarget);
+
+            Debug.DrawRay(rayStart, directionToCenter * currentDistance, Color.yellow);
+            Debug.DrawRay(rayStart, directionToHead * distanceToHead, Color.cyan);
+
+            bool isCenterVisible = false;
+            bool isHeadVisible = false;
+
+            if (Physics.Raycast(rayStart, directionToCenter, out RaycastHit centerHit, currentDistance, _combinedDetectionLayer))
+            {
+                if (((1 << centerHit.collider.gameObject.layer) & playerLayer) != 0)
+                {
+                    isCenterVisible = true;
+                }
+            }
+
+            if (Physics.Raycast(rayStart, directionToHead, out RaycastHit headHit, distanceToHead, _combinedDetectionLayer))
+            {
+                if (((1 << headHit.collider.gameObject.layer) & playerLayer) != 0)
+                {
+                    isHeadVisible = true;
+                }
+            }
+
+            return isCenterVisible || isHeadVisible;
         }
         
         private void OnDrawGizmos()

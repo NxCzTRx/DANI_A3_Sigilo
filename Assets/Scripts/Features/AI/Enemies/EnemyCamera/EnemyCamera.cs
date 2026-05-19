@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Core.Managers;
 using Features.AI.Detection;
 using UnityEngine;
 
@@ -80,7 +81,7 @@ namespace Features.AI.Enemies.EnemyCamera
 
         private void OnPlayerDetected(Transform player)
         {
-            Debug.Log($"{gameObject.name}: player detected");
+            GameManager.Instance.TriggerDetectionGameOver();
         }
     }
 }
