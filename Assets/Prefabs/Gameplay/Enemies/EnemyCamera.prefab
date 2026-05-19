@@ -149,13 +149,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Features.AI.Detection.DetectionSystem
   detectionAngle: 60
   detectionDistance: 10
+  playerLayer:
+    serializedVersion: 2
+    m_Bits: 256
   obstacleLayer:
     serializedVersion: 2
     m_Bits: 64
   rayOrigin: {fileID: 5258780384570097837}
   detectionBuildSpeed: 100
   detectionDecaySpeed: 50
-  DEBUG_DetectionLevel: 
+  debugDetectionLevel: 
   uiContainer: {fileID: 4694318697778033645}
   uiFillBar: {fileID: 4906816699429251280}
 --- !u!1001 &8906389510596503043
@@ -166,6 +169,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 5258780384570097837}
     m_Modifications:
+    - target: {fileID: 1009205111613908984, guid: c7c3d5164e943864091e866656fb7d3e, type: 3}
+      propertyPath: m_AdditionalShaderChannelsFlag
+      value: 25
+      objectReference: {fileID: 0}
     - target: {fileID: 4232341216233395694, guid: c7c3d5164e943864091e866656fb7d3e, type: 3}
       propertyPath: m_Name
       value: DetectionCanvas
