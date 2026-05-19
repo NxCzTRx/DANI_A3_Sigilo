@@ -27,7 +27,7 @@ namespace Features.Player.Components.Animation
         private void OnEnable()
         {
             Mediator.OnMove += SetSpeed;
-            Mediator.OnCrouch += SetCrouching;
+            Mediator.Crouched += SetCrouching;
             Mediator.OnSprint += SetSprinting;
             Mediator.Jumped += SetJumpTrigger;
             Mediator.Landed += SetLandTrigger;
@@ -36,7 +36,7 @@ namespace Features.Player.Components.Animation
         private void OnDisable()
         {
             Mediator.OnMove -= SetSpeed;
-            Mediator.OnCrouch -= SetCrouching;
+            Mediator.Crouched -= SetCrouching;
             Mediator.OnSprint -= SetSprinting;
             Mediator.Jumped += SetJumpTrigger;
             Mediator.Landed += SetLandTrigger;

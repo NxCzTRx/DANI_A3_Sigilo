@@ -5,7 +5,7 @@ using UnityEngine;
 namespace Features.AI.Enemies.EnemyCamera
 {
     [RequireComponent(typeof(DetectionSystem))]
-    public class SurveillanceCamera : MonoBehaviour
+    public class EnemyCamera : MonoBehaviour
     {
         [Header("Patrol")]
         [SerializeField] private List<Vector3> rotationAngles; 

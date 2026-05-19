@@ -15,6 +15,7 @@ namespace Features.Player
 
         public event Action<Vector2> OnMove;
         public event Action<bool> OnCrouch;
+        public event Action<bool> Crouched;
         public event Action<bool> OnSprint;
         public event Action OnAttack;
         public event Action OnThrow;
@@ -81,6 +82,9 @@ namespace Features.Player
 
         public void TriggerLanded() =>
             Landed?.Invoke();
+        
+        public void TriggerCrouched(bool state) =>
+            Crouched?.Invoke(state);
 
         private void HandleMove(Vector2 input)
         {

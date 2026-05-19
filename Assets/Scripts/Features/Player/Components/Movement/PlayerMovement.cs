@@ -16,6 +16,10 @@ namespace Features.Player.Components.Movement
         [SerializeField] private float jumpHeight = 2f;
         [SerializeField] private float gravity = -9.81f;
 
+        [Header("Crouch Dimensions")]
+        [SerializeField] private float normalHeight = 2f;
+        [SerializeField] private float crouchHeight = 1f;
+
         private readonly PlayerMovementLogic _playerMovementLogic = new();
 
         private CharacterController _characterController;
@@ -24,6 +28,7 @@ namespace Features.Player.Components.Movement
         private Vector2 _direction;
         private bool _isSprinting;
         private bool _isCrouching;
+        private bool _wantsToStandUp; 
         private bool _wasGrounded;
         
         private Vector3 _verticalVelocity;
@@ -40,6 +45,9 @@ namespace Features.Player.Components.Movement
             _characterController = GetComponent<CharacterController>();
             _mainCamera = Camera.main;
             _wasGrounded = true;
+            
+            _characterController.height = normalHeight;
+            _characterController.center = Vector3.zero;
         }
 
         protected void OnEnable()
@@ -56,6 +64,13 @@ namespace Features.Player.Components.Movement
         private void Update()
         {
             ApplyGravity();
+            
+            if (_wantsToStandUp && CanStandUp())
+            {
+                _isCrouching = false;
+                _wantsToStandUp = false;
+                Mediator.TriggerCrouched(false);
+            }
 
             _playerMovementLogic.Move(
                 _characterController,
@@ -68,6 +83,8 @@ namespace Features.Player.Components.Movement
             
             RotateToMovement();
             CheckAndEmitNoise();
+            
+            UpdateCrouchDimensions();
         }
 
         private void OnDisable()
@@ -135,10 +152,68 @@ namespace Features.Player.Components.Movement
             _nextNoiseTime = Time.time + noiseCooldown;
         }
 
+        private void UpdateCrouchDimensions()
+        {
+            float targetHeight = _isCrouching ? crouchHeight : normalHeight;
+            Vector3 targetCenter = Vector3.zero;
+    
+            if (_isCrouching)
+            {
+                float yOffset = (normalHeight - crouchHeight) * 0.5f;
+                targetCenter = new Vector3(0f, -yOffset, 0f);
+            }
+            
+            _characterController.height = Mathf.Lerp(_characterController.height, targetHeight, 12f * Time.deltaTime);
+            _characterController.center = Vector3.Lerp(_characterController.center, targetCenter, 12f * Time.deltaTime);
+        }
+
+        private bool CanStandUp()
+        {
+            Vector3 currentWorldCenter = transform.TransformPoint(_characterController.center);
+            
+            float halfHeight = _characterController.height * 0.5f;
+            Vector3 rayStart = currentWorldCenter + Vector3.up * halfHeight;
+
+            float distanceToClear = normalHeight - _characterController.height;
+            
+            if (distanceToClear <= 0.05f) return true;
+            
+            if (Physics.Raycast(rayStart, Vector3.up, out RaycastHit hit, distanceToClear))
+            {
+                if (!hit.collider.isTrigger)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
         private void HandleMove(Vector2 input) => _direction = input;
 
         private void HandleSprint(bool isSprinting) => _isSprinting = isSprinting;
 
-        private void HandleCrouch(bool isCrouching) => _isCrouching = isCrouching;
+        private void HandleCrouch(bool isCrouching)
+        {
+            if (isCrouching)
+            {
+                _isCrouching = true;
+                _wantsToStandUp = false;
+                Mediator.TriggerCrouched(true);
+            }
+            else
+            {
+                if (CanStandUp())
+                {
+                    _isCrouching = false;
+                    _wantsToStandUp = false;
+                    Mediator.TriggerCrouched(false);
+                }
+                else
+                {
+                    _wantsToStandUp = true;
+                }
+            }
+        }
     }
 }

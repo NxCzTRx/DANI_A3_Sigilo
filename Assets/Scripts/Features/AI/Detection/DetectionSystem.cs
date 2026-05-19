@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI; // IMPORTANTE: Añadimos esto para poder usar el componente Image
 
 namespace Features.AI.Detection
 {
@@ -9,7 +10,21 @@ namespace Features.AI.Detection
         [SerializeField] private float detectionDistance = 10f;
         [SerializeField] private LayerMask obstacleLayer;
         [SerializeField] private Transform rayOrigin;
+
+        [Header("Meter Settings")]
+        [Tooltip("How many points per second will the meter rise when at maximum proximity?")]
+        [SerializeField] private float detectionBuildSpeed = 100f;
+        [Tooltip("By how many points per second will the meter decrease when the player hides?")]
+        [SerializeField] private float detectionDecaySpeed = 50f;
+
+        [Header("Debug & UI Setup")]
+        [SerializeField] private string DEBUG_DetectionLevel;
+        [SerializeField] private GameObject uiContainer;
+        [SerializeField] private Image uiFillBar;
+
+        public float DetectionLevel => _currentDetectionLevel;
         
+        private float _currentDetectionLevel;
         private float _sqrDetectionDistance;
         private float _cosHalfAngle;
 
@@ -17,16 +32,70 @@ namespace Features.AI.Detection
         {
             _sqrDetectionDistance = detectionDistance * detectionDistance;
             _cosHalfAngle = Mathf.Cos(detectionAngle * 0.5f * Mathf.Deg2Rad);
+            
+            if (uiContainer != null)
+            {
+                uiContainer.SetActive(false);
+            }
         }
 
         public bool IsPlayerDetected(Transform player, Transform enemy)
         {
-            Vector3 directionToPlayer = player.position - enemy.position;
+            bool isVisuallyInSight = CheckVisualSight(player, enemy, out float distance);
+
+            if (isVisuallyInSight)
+            {
+                float proximityFactor = 1f - (distance / detectionDistance);
+                proximityFactor = Mathf.Clamp01(proximityFactor);
+                
+                _currentDetectionLevel += detectionBuildSpeed * proximityFactor * Time.deltaTime;
+            }
+            else
+            {
+                _currentDetectionLevel -= detectionDecaySpeed * Time.deltaTime;
+            }
             
+            _currentDetectionLevel = Mathf.Clamp(_currentDetectionLevel, 0f, 100f);
+            DEBUG_DetectionLevel = $"Detection level: {_currentDetectionLevel}";
+            
+            UpdateDetectionUI();
+
+            return _currentDetectionLevel >= 100f;
+        }
+        
+        private void UpdateDetectionUI()
+        {
+            if (uiContainer == null || uiFillBar == null) return;
+
+            if (_currentDetectionLevel > 0f)
+            {
+                if (!uiContainer.activeSelf)
+                {
+                    uiContainer.SetActive(true);
+                }
+                
+                uiFillBar.fillAmount = _currentDetectionLevel / 100f;
+            }
+            else
+            {
+                if (uiContainer.activeSelf)
+                {
+                    uiFillBar.fillAmount = 0f;
+                    uiContainer.SetActive(false);
+                }
+            }
+        }
+
+        private bool CheckVisualSight(Transform player, Transform enemy, out float currentDistance)
+        {
+            currentDistance = 0f;
+            Vector3 directionToPlayer = player.position - enemy.position;
             float sqrDistance = directionToPlayer.sqrMagnitude;
 
             if (sqrDistance > _sqrDetectionDistance)
                 return false;
+
+            currentDistance = Mathf.Sqrt(sqrDistance);
             
             directionToPlayer.Normalize();
             float dotProduct = Vector3.Dot(enemy.forward, directionToPlayer);
@@ -38,14 +107,14 @@ namespace Features.AI.Detection
             return !Physics.Raycast(rayStart, directionToPlayer, detectionDistance, obstacleLayer);
         }
         
-private void OnDrawGizmos()
+        private void OnDrawGizmos()
         {
             Matrix4x4 originalMatrix = Gizmos.matrix;
             Vector3 originPosition = rayOrigin != null ? rayOrigin.position : transform.position;
             Quaternion originRotation = rayOrigin != null ? rayOrigin.rotation : transform.rotation;
             Gizmos.matrix = Matrix4x4.TRS(originPosition, originRotation, Vector3.one);
-
-            Gizmos.color = Color.darkRed;
+            
+            Gizmos.color = Color.Lerp(Color.darkRed, Color.red, _currentDetectionLevel / 100f);
             
             float halfAngleRad = detectionAngle * 0.5f * Mathf.Deg2Rad;
             float radius = detectionDistance * Mathf.Sin(halfAngleRad);
@@ -64,11 +133,12 @@ private void OnDrawGizmos()
 
 #if UNITY_EDITOR
             UnityEditor.Handles.matrix = Gizmos.matrix;
-            UnityEditor.Handles.color = Color.darkRed;
+            UnityEditor.Handles.color = Gizmos.color;
             
             UnityEditor.Handles.DrawWireDisc(coneCenter, Vector3.forward, radius);
             
-            UnityEditor.Handles.color = new Color(0.5f, 0f, 0f, 0.1f);
+            float alpha = Mathf.Lerp(0.05f, 0.3f, _currentDetectionLevel / 100f);
+            UnityEditor.Handles.color = new Color(Gizmos.color.r, Gizmos.color.g, Gizmos.color.b, alpha);
             
             UnityEditor.Handles.DrawSolidArc(Vector3.zero, Vector3.up, leftPoint, detectionAngle, detectionDistance);
             UnityEditor.Handles.DrawSolidArc(Vector3.zero, Vector3.right, topPoint, detectionAngle, detectionDistance);
