@@ -52,11 +52,11 @@ NavMeshAgent:
   m_Enabled: 1
   m_AgentTypeID: 0
   m_Radius: 0.5
-  m_Speed: 3.5
+  m_Speed: 3
   m_Acceleration: 8
   avoidancePriority: 50
-  m_AngularSpeed: 120
-  m_StoppingDistance: 0
+  m_AngularSpeed: 400
+  m_StoppingDistance: 0.1
   m_AutoTraverseOffMeshLink: 1
   m_AutoBraking: 1
   m_AutoRepath: 1
@@ -141,13 +141,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Features.AI.Detection.DetectionSystem
   detectionAngle: 90
   detectionDistance: 20
+  playerLayer:
+    serializedVersion: 2
+    m_Bits: 256
   obstacleLayer:
     serializedVersion: 2
     m_Bits: 64
   rayOrigin: {fileID: 1676544673070858304}
   detectionBuildSpeed: 200
   detectionDecaySpeed: 50
-  DEBUG_DetectionLevel: 
+  debugDetectionLevel: 
   uiContainer: {fileID: 845730734647606113}
   uiFillBar: {fileID: 1045311952876413020}
 --- !u!114 &8761452730648965492
@@ -165,7 +168,10 @@ MonoBehaviour:
   patrolPoints:
   - {fileID: 0}
   - {fileID: 0}
-  waitTimeAtPoint: 10
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  waitTimeAtPoint: 1
 --- !u!114 &7470800141531821709
 MonoBehaviour:
   m_ObjectHideFlags: 0
