@@ -27,13 +27,11 @@ namespace Features.AI.Detection
         public float DetectionLevel => _currentDetectionLevel;
         
         private float _currentDetectionLevel;
-        private float _sqrDetectionDistance;
         private float _cosHalfAngle;
         private LayerMask _combinedDetectionLayer;
 
         private void Awake()
         {
-            _sqrDetectionDistance = detectionDistance * detectionDistance;
             _cosHalfAngle = Mathf.Cos(detectionAngle * 0.5f * Mathf.Deg2Rad);
             _combinedDetectionLayer = playerLayer | obstacleLayer;
             
@@ -101,49 +99,59 @@ namespace Features.AI.Detection
             if (player.TryGetComponent<CharacterController>(out var playerController))
             {
                 playerCenterTarget = player.TransformPoint(playerController.center);
-                float internalHeadOffset = (playerController.height * 0.5f) - (playerController.radius * 0.3f);
+                float internalHeadOffset = (playerController.height * 0.5f) - playerController.radius;
                 playerHeadTarget = playerCenterTarget + (Vector3.up * internalHeadOffset);
             }
             else
             {
                 playerCenterTarget = player.position;
-                playerHeadTarget = player.position + (Vector3.up * 1.5f);
+                playerHeadTarget = player.position + (Vector3.up * 1.2f);
             }
 
-            Vector3 directionToCenter = playerCenterTarget - rayStart;
-            float sqrDistance = directionToCenter.sqrMagnitude;
+            Vector3 vectorToCenter = playerCenterTarget - rayStart;
+            Vector3 vectorToHead = playerHeadTarget - rayStart;
 
-            if (sqrDistance > _sqrDetectionDistance)
-                return false;
+            float distanceToCenter = vectorToCenter.magnitude;
+            float distanceToHead = vectorToHead.magnitude;
 
-            currentDistance = Mathf.Sqrt(sqrDistance);
-            directionToCenter.Normalize();
-            
-            float dotProduct = Vector3.Dot(enemy.forward, directionToCenter);
-            if (dotProduct < _cosHalfAngle) return false;
+            Vector3 directionToCenter = vectorToCenter / distanceToCenter;
+            Vector3 directionToHead = vectorToHead / distanceToHead;
 
-            Vector3 directionToHead = (playerHeadTarget - rayStart).normalized;
-            float distanceToHead = Vector3.Distance(rayStart, playerHeadTarget);
+            bool isCenterValid = distanceToCenter <= detectionDistance && Vector3.Dot(enemy.forward, directionToCenter) >= _cosHalfAngle;
+            bool isHeadValid = distanceToHead <= detectionDistance && Vector3.Dot(enemy.forward, directionToHead) >= _cosHalfAngle;
 
-            Debug.DrawRay(rayStart, directionToCenter * currentDistance, Color.yellow);
+            if (!isCenterValid && !isHeadValid) return false;
+
+            Debug.DrawRay(rayStart, directionToCenter * distanceToCenter, Color.yellow);
             Debug.DrawRay(rayStart, directionToHead * distanceToHead, Color.cyan);
 
             bool isCenterVisible = false;
             bool isHeadVisible = false;
 
-            if (Physics.Raycast(rayStart, directionToCenter, out RaycastHit centerHit, currentDistance, _combinedDetectionLayer))
+            if (isCenterValid)
             {
-                if (((1 << centerHit.collider.gameObject.layer) & playerLayer) != 0)
+                if (Physics.Raycast(rayStart, directionToCenter, out RaycastHit centerHit, detectionDistance, _combinedDetectionLayer))
                 {
-                    isCenterVisible = true;
+                    if (((1 << centerHit.collider.gameObject.layer) & playerLayer) != 0)
+                    {
+                        isCenterVisible = true;
+                        currentDistance = centerHit.distance;
+                    }
                 }
             }
 
-            if (Physics.Raycast(rayStart, directionToHead, out RaycastHit headHit, distanceToHead, _combinedDetectionLayer))
+            if (isHeadValid)
             {
-                if (((1 << headHit.collider.gameObject.layer) & playerLayer) != 0)
+                if (Physics.Raycast(rayStart, directionToHead, out RaycastHit headHit, detectionDistance, _combinedDetectionLayer))
                 {
-                    isHeadVisible = true;
+                    if (((1 << headHit.collider.gameObject.layer) & playerLayer) != 0)
+                    {
+                        isHeadVisible = true;
+                        if (!isCenterVisible || headHit.distance < currentDistance)
+                        {
+                            currentDistance = headHit.distance;
+                        }
+                    }
                 }
             }
 
