@@ -14,14 +14,19 @@ namespace Features.AI.Enemies.NinjaEnemy.States
         
         public override void OnEnter()
         {
-            if (patrolPoints.Length <= 1)
-                Debug.LogError($"Patrol state at {Controller.gameObject} has to have at least tow points");
+            if (patrolPoints == null || patrolPoints.Length == 0)
+            {
+                Debug.LogWarning($"Patrol state at {Controller.gameObject} has no points assigned.");
+                return;
+            }
             
             Controller.Agent.SetDestination(patrolPoints[_currentPatrolIndex].position);
         }
 
         public override void OnUpdate()
         {
+            if (patrolPoints.Length <= 1) return;
+
             if (Controller.Agent.remainingDistance <= Controller.Agent.stoppingDistance &&
                 !Controller.Agent.pathPending
                 && !_isWaiting)
@@ -33,14 +38,23 @@ namespace Features.AI.Enemies.NinjaEnemy.States
 
         public override void OnExit()
         {
-            
+            if (_isWaiting)
+            {
+                StopAllCoroutines();
+                _isWaiting = false;
+            }
         }
         
         private IEnumerator NextPatrolCoroutine()
         {
             yield return new WaitForSeconds(waitTimeAtPoint);
-            _currentPatrolIndex = (_currentPatrolIndex + 1) % patrolPoints.Length;
-            Controller.Agent.SetDestination(patrolPoints[_currentPatrolIndex].position);
+            
+            if (patrolPoints.Length > 1)
+            {
+                _currentPatrolIndex = (_currentPatrolIndex + 1) % patrolPoints.Length;
+                Controller.Agent.SetDestination(patrolPoints[_currentPatrolIndex].position);
+            }
+            
             _isWaiting = false;
         }
     }
