@@ -5,6 +5,7 @@ using Features.AI.Base;
 using Features.AI.Definitions;
 using Features.AI.Detection;
 using Features.AI.Enemies.NinjaEnemy.States;
+using Features.AI.Enemies.NinjaEnemy.Visuals;
 using Features.AI.Health;
 using UnityEngine;
 using UnityEngine.AI;
@@ -14,6 +15,7 @@ namespace Features.AI.Enemies.NinjaEnemy
     public class NinjaEnemyController : FsmController<NinjaEnemyController>, IAlertable, IMediator
     {
         [SerializeField] private GameObject player;
+        [SerializeField] private EnemyNinjaVisuals visuals;
         public GameObject Player => player;
 
         // --- Components ---
@@ -64,6 +66,11 @@ namespace Features.AI.Enemies.NinjaEnemy
                 GameManager.Instance.TriggerDetectionGameOver();
             }
         }
+        
+        private void FixedUpdate()
+        {
+            visuals?.SetSpeed(Agent.velocity.sqrMagnitude);
+        }
 
         private void OnDisable()
         {
@@ -90,6 +97,6 @@ namespace Features.AI.Enemies.NinjaEnemy
         }
 
         public void TriggerOnSearch() =>
-            OnSearch?.Invoke();
+            visuals?.UpdateSearchTrigger();
     }
 }

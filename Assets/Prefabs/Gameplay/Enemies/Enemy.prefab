@@ -127,6 +127,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Features.AI.Enemies.NinjaEnemy.NinjaEnemyController
   player: {fileID: 0}
+  visuals: {fileID: 7294303057343422805}
 --- !u!114 &4996628172954821454
 MonoBehaviour:
   m_ObjectHideFlags: 0
