@@ -4,36 +4,24 @@ using UnityEngine;
 
 namespace Features.AI.Enemies.NinjaEnemy.Visuals
 {
-    public class EnemyNinjaVisuals : MediatorClientSystem<NinjaEnemyController>
+    public class EnemyNinjaVisuals : MonoBehaviour
     {
         private Animator _animator;
 
         private static readonly int Speed = Animator.StringToHash("Speed");
         private static readonly int SearchTrigger = Animator.StringToHash("SearchTrigger");
 
-        protected override void Awake()
+        private void Awake()
         {
-            base.Awake();
-
             _animator = GetComponent<Animator>();
         }
 
-        private void OnEnable()
+        public void SetSpeed(float sqrMagnitude)
         {
-            Mediator.OnSearch += UpdateSearchTrigger;
-        }
-
-        private void OnDisable()
-        {
-            Mediator.OnSearch += UpdateSearchTrigger;
-        }
-
-        private void FixedUpdate()
-        {
-            _animator.SetFloat(Speed, Mediator.Agent.velocity.sqrMagnitude);
+            _animator.SetFloat(Speed, sqrMagnitude);
         }
         
-        private void UpdateSearchTrigger()
+        public void UpdateSearchTrigger()
         {
             _animator.SetTrigger(SearchTrigger);
         }
